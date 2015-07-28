@@ -6,6 +6,7 @@ following property:
 Required root node property:
 
 compatible: Must contain one of
+   "mediatek,mt6580"
    "mediatek,mt6589"
    "mediatek,mt6592"
    "mediatek,mt6795"
@@ -16,6 +17,9 @@ compatible: Must contain one of
 
 Supported boards:
 
+- Evaluation board for MT6580:
+    Required root node properties:
+      - compatible = "mediatek,mt6580-evbp1", "mediatek,mt6580";
 - bq Aquaris5 smart phone:
     Required root node properties:
       - compatible = "mundoreader,bq-aquaris5", "mediatek,mt6589";

@@ -8,8 +8,9 @@ Required properties:
   * "mediatek,mt6795-uart" for MT6795 compatible UARTS
   * "mediatek,mt6589-uart" for MT6589 compatible UARTS
   * "mediatek,mt6582-uart" for MT6582 compatible UARTS
-  * "mediatek,mt6577-uart" for all compatible UARTS (MT8173, MT6795, MT6589,
-	MT6582, MT6577)
+  * "mediatek,mt6580-uart" for MT6580 compatible UARTS
+  * "mediatek,mt6577-uart" for all compatible UARTS (MT8173, MT6589, MT6582, 
+	MT6582, MT6580, MT6577)
 
 - reg: The base address of the UART register bank.
 
