@@ -1,4 +1,17 @@
 language: c
 
+ls:
+  - linux
 
-script: make ARCH=arm defconfig; make ARCH=arm; make ARCH=arm dtbs
+befor_install:
+  - weget -c https://releases.linaro.org/components/toolchain/binaries/5.3-2016.02/arm-linux-gnueabihf/gcc-linaro-5.3-2016.02-x86_64_arm-linux-gnueabihf.tar.xz
+  - tar xf gcc-linaro-5.3-2016.02-x86_64_arm-linux-gnueabihf.tar.xz
+  - export PATH=$PATH:$PWD/gcc-linaro-5.3-2016.02-x86_64_arm-linux-gnueabihf/bin/
+  - arm-linux-gnueabihf-gcc --version
+
+script:
+  - export ARCH=arm 
+  - export CROSS_COMPILE=arm-linux-gnueabihf- 
+  - make defconfig
+  - make all
+  - make dtbs
