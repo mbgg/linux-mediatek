@@ -1,0 +1,4 @@
+language: c
+
+
+script: make ARCH=arm; make ARCH=arm dtbs
