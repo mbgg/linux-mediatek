@@ -4,7 +4,7 @@ ls:
   - linux
 
 befor_install:
-  - weget -c https://releases.linaro.org/components/toolchain/binaries/5.3-2016.02/arm-linux-gnueabihf/gcc-linaro-5.3-2016.02-x86_64_arm-linux-gnueabihf.tar.xz
+  - wget -c https://releases.linaro.org/components/toolchain/binaries/5.3-2016.02/arm-linux-gnueabihf/gcc-linaro-5.3-2016.02-x86_64_arm-linux-gnueabihf.tar.xz
   - tar xf gcc-linaro-5.3-2016.02-x86_64_arm-linux-gnueabihf.tar.xz
   - export PATH=$PATH:$PWD/gcc-linaro-5.3-2016.02-x86_64_arm-linux-gnueabihf/bin/
   - arm-linux-gnueabihf-gcc --version
