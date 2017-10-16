@@ -1095,7 +1095,7 @@ static int mtk_dsi_probe(struct platform_device *pdev)
 	dsi->host.ops = &mtk_dsi_ops;
 	dsi->host.dev = dev;
 
-	ret = drm_of_find_panel_or_bridge(dev->of_node, 0, 0,
+	ret = drm_of_find_panel_or_bridge(dev->of_node, 1, 0,
 					  &dsi->panel, &dsi->bridge);
 	if (ret)
 		return ret;
