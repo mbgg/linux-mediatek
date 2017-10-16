@@ -682,8 +682,9 @@ static int mtk_dpi_probe(struct platform_device *pdev)
 	dpi->engine_clk = devm_clk_get(dev, "engine");
 	if (IS_ERR(dpi->engine_clk)) {
 		ret = PTR_ERR(dpi->engine_clk);
-		dev_err(dev, "Failed to get engine clock: %d\n", ret);
-		return ret;
+		dev_err(dev, "Failed to get engine clock: %d, deferring\n", ret);
+		return -EPROBE_DEFER;
+		//return ret;
 	}
 
 	dpi->pixel_clk = devm_clk_get(dev, "pixel");

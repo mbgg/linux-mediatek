@@ -1441,8 +1441,9 @@ static int mtk_hdmi_dt_parse_pdata(struct mtk_hdmi *hdmi,
 
 	ret = mtk_hdmi_get_all_clk(hdmi, np);
 	if (ret) {
-		dev_err(dev, "Failed to get clocks: %d\n", ret);
-		return ret;
+		dev_err(dev, "Failed to get clocks: %d, deferring\n", ret);
+		return -EPROBE_DEFER;
+		//return ret;
 	}
 
 	/* The CEC module handles HDMI hotplug detection */

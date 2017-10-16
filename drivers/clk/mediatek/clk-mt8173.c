@@ -1152,7 +1152,7 @@ static void __init mtk_imgsys_init(struct device_node *node)
 }
 CLK_OF_DECLARE(mtk_imgsys, "mediatek,mt8173-imgsys", mtk_imgsys_init);
 
-static void __init mtk_mmsys_init(struct device_node *node)
+/*static*/ void /*__init*/ mtk_mmsys_init(struct device_node *node)
 {
 	struct clk_onecell_data *clk_data;
 	int r;
@@ -1167,7 +1167,7 @@ static void __init mtk_mmsys_init(struct device_node *node)
 		pr_err("%s(): could not register clock provider: %d\n",
 			__func__, r);
 }
-CLK_OF_DECLARE(mtk_mmsys, "mediatek,mt8173-mmsys", mtk_mmsys_init);
+//CLK_OF_DECLARE(mtk_mmsys, "mediatek,mt8173-mmsys", mtk_mmsys_init);
 
 static void __init mtk_vdecsys_init(struct device_node *node)
 {
