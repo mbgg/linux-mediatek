@@ -1,4 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0
+ccflags-y := -Iinclude/drm
+
+obj-$(CONFIG_DRM_PARADE_PS8640) += parade-ps8640.o
 obj-$(CONFIG_DRM_ANALOGIX_ANX78XX) += analogix-anx78xx.o
 obj-$(CONFIG_DRM_CDNS_DSI) += cdns-dsi.o
 obj-$(CONFIG_DRM_GENERIC_GPIO_MUX) += generic-gpio-mux.o
