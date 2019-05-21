@@ -116,6 +116,14 @@ config COMMON_CLK_MT2712_VENCSYS
 	---help---
 	  This driver supports MediaTek MT2712 vencsys clocks.
 
+config COMMON_CLK_MT6589
+	bool "Clock driver for MediaTek MT6589"
+	depends on (ARCH_MEDIATEK && ARM) || COMPILE_TEST
+	select COMMON_CLK_MEDIATEK
+	default ARCH_MEDIATEK && ARM
+	---help---
+	  This driver supports MediaTek MT6589 basic clocks.
+
 config COMMON_CLK_MT6797
        bool "Clock driver for MediaTek MT6797"
        depends on (ARCH_MEDIATEK && ARM64) || COMPILE_TEST
