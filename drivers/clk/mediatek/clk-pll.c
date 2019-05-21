@@ -98,7 +98,11 @@ static void mtk_pll_set_rate_regs(struct mtk_clk_pll *pll, u32 pcw,
 
 	/* set postdiv */
 	val = readl(pll->pd_addr);
-	val &= ~(POSTDIV_MASK << pll->data->pd_shift);
+	if (!(pll->data->flags & HAVE_POSTDIV_MASK))
+		val &= ~(POSTDIV_MASK << pll->data->pd_shift);
+	else
+		val &= ~(pll->data->pd_mask << pll->data->pd_shift);
+
 	val |= (ffs(postdiv) - 1) << pll->data->pd_shift;
 
 	/* postdiv and pcw need to set at the same time if on same register */
@@ -113,14 +117,16 @@ static void mtk_pll_set_rate_regs(struct mtk_clk_pll *pll, u32 pcw,
 	val |= pcw << pll->data->pcw_shift;
 	writel(val, pll->pcw_addr);
 
-	con1 = readl(pll->base_addr + REG_CON1);
+	if (!(pll->data->flags & NO_PWR_REG)) {
+		con1 = readl(pll->base_addr + REG_CON1);
 
-	if (pll_en)
-		con1 |= CON0_PCW_CHG;
+		if (pll_en)
+			con1 |= CON0_PCW_CHG;
 
-	writel(con1, pll->base_addr + REG_CON1);
-	if (pll->tuner_addr)
-		writel(con1 + 1, pll->tuner_addr);
+		writel(con1, pll->base_addr + REG_CON1);
+		if (pll->tuner_addr)
+			writel(con1 + 1, pll->tuner_addr);
+	}
 
 	if (pll_en)
 		udelay(20);
@@ -177,6 +183,12 @@ static int mtk_pll_set_rate(struct clk_hw *hw, unsigned long rate,
 	u32 pcw = 0;
 	u32 postdiv;
 
+	if (pll->data->flags & HAVE_FIXED_FREQ) {
+		pr_err("%s: Invalid rate for fixed frequency pll clk %s\n",
+			__func__, pll->data->name);
+		return -EINVAL;
+	}
+
 	mtk_pll_calc_values(pll, &pcw, &postdiv, rate, parent_rate);
 	mtk_pll_set_rate_regs(pll, pcw, postdiv);
 
@@ -190,7 +202,8 @@ static unsigned long mtk_pll_recalc_rate(struct clk_hw *hw,
 	u32 postdiv;
 	u32 pcw;
 
-	postdiv = (readl(pll->pd_addr) >> pll->data->pd_shift) & POSTDIV_MASK;
+	postdiv = (readl(pll->pd_addr) >> pll->data->pd_shift)
+			& pll->data->pd_mask;
 	postdiv = 1 << postdiv;
 
 	pcw = readl(pll->pcw_addr) >> pll->data->pcw_shift;
@@ -216,13 +229,15 @@ static int mtk_pll_prepare(struct clk_hw *hw)
 	struct mtk_clk_pll *pll = to_mtk_clk_pll(hw);
 	u32 r;
 
-	r = readl(pll->pwr_addr) | CON0_PWR_ON;
-	writel(r, pll->pwr_addr);
-	udelay(1);
+	if (!(pll->data->flags & NO_PWR_REG)) {
+		r = readl(pll->pwr_addr) | CON0_PWR_ON;
+		writel(r, pll->pwr_addr);
+		udelay(1);
 
-	r = readl(pll->pwr_addr) & ~CON0_ISO_EN;
-	writel(r, pll->pwr_addr);
-	udelay(1);
+		r = readl(pll->pwr_addr) & ~CON0_ISO_EN;
+		writel(r, pll->pwr_addr);
+		udelay(1);
+	}
 
 	r = readl(pll->base_addr + REG_CON0);
 	r |= pll->data->en_mask;
@@ -270,13 +285,15 @@ static void mtk_pll_unprepare(struct clk_hw *hw)
 	r &= ~CON0_BASE_EN;
 	writel(r, pll->base_addr + REG_CON0);
 
-	r = readl(pll->pwr_addr) | CON0_ISO_EN;
-	writel(r, pll->pwr_addr);
+	if (!(pll->data->flags & NO_PWR_REG)) {
+		r = readl(pll->pwr_addr) | CON0_ISO_EN;
+		writel(r, pll->pwr_addr);
 
-	r = readl(pll->pwr_addr) & ~CON0_PWR_ON;
-	writel(r, pll->pwr_addr);
+		r = readl(pll->pwr_addr) & ~CON0_PWR_ON;
+		writel(r, pll->pwr_addr);
+
+	}
 }
-
 static const struct clk_ops mtk_pll_ops = {
 	.is_prepared	= mtk_pll_is_prepared,
 	.prepare	= mtk_pll_prepare,

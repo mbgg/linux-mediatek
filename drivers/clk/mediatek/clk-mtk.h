@@ -205,8 +205,11 @@ void mtk_clk_register_dividers(const struct mtk_clk_divider *mcds,
 
 struct clk_onecell_data *mtk_alloc_clk_data(unsigned int clk_num);
 
-#define HAVE_RST_BAR	BIT(0)
-#define PLL_AO		BIT(1)
+#define HAVE_RST_BAR		BIT(0)
+#define PLL_AO			BIT(1)
+#define NO_PWR_REG		BIT(2)
+#define HAVE_FIXED_FREQ		BIT(3)
+#define HAVE_POSTDIV_MASK 	BIT(4)
 
 struct mtk_pll_div_table {
 	u32 div;
@@ -220,6 +223,7 @@ struct mtk_pll_data {
 	uint32_t pwr_reg;
 	uint32_t en_mask;
 	uint32_t pd_reg;
+	uint32_t pd_mask;
 	uint32_t tuner_reg;
 	uint32_t tuner_en_reg;
 	uint8_t tuner_en_bit;
