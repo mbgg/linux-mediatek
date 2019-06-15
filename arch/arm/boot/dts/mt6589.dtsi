@@ -65,6 +65,12 @@
 			#clock-cells = <0>;
 			clock-frequency = <0>;
 		};
+	
+		uart_clk: dummy26m {
+			compatible = "fixed-clock";
+			clock-frequency = <26000000>;
+                        #clock-cells = <0>;
+		};		
 
 		clk26m: clk26m {
 			compatible = "fixed-clock";
@@ -80,7 +86,7 @@
 		ranges;
 
 		topckgen: topckgen@10000000 {
-			compatible = "mediatek,mt6589-topckgen";
+			compatible = "mediatek,mt6589-topckgen", "syscon";
 			reg = <0x10000000 0x1000>;
 			#clock-cells = <1>;
 		};
@@ -137,8 +143,9 @@
 			compatible = "mediatek,mt6577-uart";
 			reg = <0x11006000 0x400>;
 			interrupts = <GIC_SPI 51 IRQ_TYPE_LEVEL_LOW>;
-			clocks = <&pericfg CLK_PERI_UART0_SEL>, <&pericfg CLK_PERI_UART0_CK>;
-			clock-names = "baud", "bus";
+			clocks = <&uart_clk>;
+//			clocks = <&pericfg CLK_PERI_UART0_SEL>, <&pericfg CLK_PERI_UART0_CK>;
+//			clock-names = "baud", "bus";
 			status = "disabled";
 		};
 
@@ -146,8 +153,9 @@
 			compatible = "mediatek,mt6577-uart";
 			reg = <0x11007000 0x400>;
 			interrupts = <GIC_SPI 52 IRQ_TYPE_LEVEL_LOW>;
-			clocks = <&pericfg CLK_PERI_UART1_SEL>, <&pericfg CLK_PERI_UART1_CK>;
-			clock-names = "baud", "bus";
+			clocks = <&uart_clk>;
+//			clocks = <&pericfg CLK_PERI_UART1_SEL>, <&pericfg CLK_PERI_UART1_CK>;
+//			clock-names = "baud", "bus";
 			status = "disabled";
 		};
 
@@ -155,8 +163,9 @@
 			compatible = "mediatek,mt6577-uart";
 			reg = <0x11008000 0x400>;
 			interrupts = <GIC_SPI 53 IRQ_TYPE_LEVEL_LOW>;
-			clocks = <&pericfg CLK_PERI_UART2_SEL>, <&pericfg CLK_PERI_UART2_CK>;
-			clock-names = "baud", "bus";
+			clocks = <&uart_clk>;
+//			clocks = <&pericfg CLK_PERI_UART2_SEL>, <&pericfg CLK_PERI_UART2_CK>;
+//			clock-names = "baud", "bus";
 			status = "disabled";
 		};
 
@@ -164,6 +173,7 @@
 			compatible = "mediatek,mt6577-uart";
 			reg = <0x11009000 0x400>;
 			interrupts = <GIC_SPI 54 IRQ_TYPE_LEVEL_LOW>;
+//			clocks = <&uart_clk>;
 			clocks = <&pericfg CLK_PERI_UART3_SEL>, <&pericfg CLK_PERI_UART3_CK>;
 			clock-names = "baud", "bus";
 			status = "disabled";

@@ -349,7 +349,9 @@ static int mtk8250_probe_of(struct platform_device *pdev, struct uart_port *p,
 
 	data->bus_clk = devm_clk_get(&pdev->dev, "bus");
 	if (IS_ERR(data->bus_clk))
+	{ dev_err(&pdev->dev, "we have a problem\n");
 		return PTR_ERR(data->bus_clk);
+	}
 
 	data->dma = NULL;
 #ifdef CONFIG_SERIAL_8250_DMA

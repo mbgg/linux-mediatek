@@ -563,6 +563,7 @@ static void __init mtk_pericfg_init(struct device_node *node)
 	int r;
 	void __iomem *base;
 
+	pr_err("%s(): enter\n", __func__);
 	base = of_iomap(node, 0);
 	if (!base) {
 		pr_err("%s(): ioremap failed\n", __func__);
@@ -571,8 +572,9 @@ static void __init mtk_pericfg_init(struct device_node *node)
 
 	clk_data = mtk_alloc_clk_data(CLK_PERI_NR_CLK);
 
-	mtk_clk_register_gates(node, peri_gates, ARRAY_SIZE(peri_clks),
-						clk_data);
+	if (mtk_clk_register_gates(node, peri_gates, ARRAY_SIZE(peri_clks),
+						clk_data) )
+		pr_err("%s(): could not register gates\n", __func__);
 	mtk_clk_register_composites(peri_clks, ARRAY_SIZE(peri_clks), base,
 			&mt6589_clk_lock, clk_data);
 
@@ -582,6 +584,7 @@ static void __init mtk_pericfg_init(struct device_node *node)
 			__func__, r);
 
 	mtk_register_reset_controller(node, 2, 0);
+	pr_err("%s(): exit\n", __func__);
 }
 CLK_OF_DECLARE(mtk_pericfg, "mediatek,mt6589-pericfg", mtk_pericfg_init);
 
