@@ -40,8 +40,6 @@ bool svs_mt8192_efuse_parsing(struct svs_platform *svsp)
 			svsb->dcbdet = (svsp->efuse[17] >> 16) & GENMASK(7, 0);
 			svsb->dcmdet = (svsp->efuse[17] >> 24) & GENMASK(7, 0);
 		}
-
-		svsb->vmax += svsb->dvt_fixed;
 	}
 
 	ret = svs_thermal_efuse_get_data(svsp);
