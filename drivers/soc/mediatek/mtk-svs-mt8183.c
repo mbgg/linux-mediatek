@@ -2,13 +2,114 @@
 
 #include "mtk-svs.h"
 
-bool svs_mt8183_efuse_parsing(struct svs_platform *svsp)
+static int svs_mt8183_efuse_thermal_parsing(struct svs_platform *svsp)
 {
 	struct svs_bank *svsb;
 	int format[6], x_roomt[6], o_vtsmcu[5], o_vtsabb, tb_roomt = 0;
 	int adc_ge_t, adc_oe_t, ge, oe, gain, degc_cali, adc_cali_en_t;
 	int o_slope, o_slope_sign, ts_id;
-	u32 idx, i, ft_pgm, mts, temp0, temp1, temp2;
+	u32 idx, i, mts, temp0, temp1, temp2;
+
+	adc_ge_t = (svsp->tefuse[1] >> 22) & GENMASK(9, 0);
+	adc_oe_t = (svsp->tefuse[1] >> 12) & GENMASK(9, 0);
+
+	o_vtsmcu[0] = (svsp->tefuse[0] >> 17) & GENMASK(8, 0);
+	o_vtsmcu[1] = (svsp->tefuse[0] >> 8) & GENMASK(8, 0);
+	o_vtsmcu[2] = svsp->tefuse[1] & GENMASK(8, 0);
+	o_vtsmcu[3] = (svsp->tefuse[2] >> 23) & GENMASK(8, 0);
+	o_vtsmcu[4] = (svsp->tefuse[2] >> 5) & GENMASK(8, 0);
+	o_vtsabb = (svsp->tefuse[2] >> 14) & GENMASK(8, 0);
+
+	degc_cali = (svsp->tefuse[0] >> 1) & GENMASK(5, 0);
+	adc_cali_en_t = svsp->tefuse[0] & BIT(0);
+	o_slope_sign = (svsp->tefuse[0] >> 7) & BIT(0);
+
+	ts_id = (svsp->tefuse[1] >> 9) & BIT(0);
+	o_slope = (svsp->tefuse[0] >> 26) & GENMASK(5, 0);
+
+	if (adc_cali_en_t == 1) {
+		if (!ts_id)
+			o_slope = 0;
+
+		if (adc_ge_t < 265 || adc_ge_t > 758 ||
+		    adc_oe_t < 265 || adc_oe_t > 758 ||
+		    o_vtsmcu[0] < -8 || o_vtsmcu[0] > 484 ||
+		    o_vtsmcu[1] < -8 || o_vtsmcu[1] > 484 ||
+		    o_vtsmcu[2] < -8 || o_vtsmcu[2] > 484 ||
+		    o_vtsmcu[3] < -8 || o_vtsmcu[3] > 484 ||
+		    o_vtsmcu[4] < -8 || o_vtsmcu[4] > 484 ||
+		    o_vtsabb < -8 || o_vtsabb > 484 ||
+		    degc_cali < 1 || degc_cali > 63) {
+			dev_err(svsp->dev, "bad thermal efuse, no mon mode\n");
+			return -1;
+		}
+	} else {
+		dev_err(svsp->dev, "no thermal efuse, no mon mode\n");
+		return -1;
+	}
+
+	ge = ((adc_ge_t - 512) * 10000) / 4096;
+	oe = (adc_oe_t - 512);
+	gain = (10000 + ge);
+
+	format[0] = (o_vtsmcu[0] + 3350 - oe);
+	format[1] = (o_vtsmcu[1] + 3350 - oe);
+	format[2] = (o_vtsmcu[2] + 3350 - oe);
+	format[3] = (o_vtsmcu[3] + 3350 - oe);
+	format[4] = (o_vtsmcu[4] + 3350 - oe);
+	format[5] = (o_vtsabb + 3350 - oe);
+
+	for (i = 0; i < 6; i++)
+		x_roomt[i] = (((format[i] * 10000) / 4096) * 10000) / gain;
+
+	temp0 = (10000 * 100000 / gain) * 15 / 18;
+
+	if (!o_slope_sign)
+		mts = (temp0 * 10) / (1534 + o_slope * 10);
+	else
+		mts = (temp0 * 10) / (1534 - o_slope * 10);
+
+	for (idx = 0; idx < svsp->bank_max; idx++) {
+		svsb = &svsp->banks[idx];
+		svsb->mts = mts;
+
+		switch (svsb->sw_id) {
+		case SVSB_CPU_LITTLE:
+			tb_roomt = x_roomt[3];
+			break;
+		case SVSB_CPU_BIG:
+			tb_roomt = x_roomt[4];
+			break;
+		case SVSB_CCI:
+			tb_roomt = x_roomt[3];
+			break;
+		case SVSB_GPU:
+			tb_roomt = x_roomt[1];
+			break;
+		default:
+			dev_err(svsb->dev, "unknown sw_id: %u\n", svsb->sw_id);
+			return -1;
+		}
+
+		temp0 = (degc_cali * 10 / 2);
+		temp1 = ((10000 * 100000 / 4096 / gain) *
+			 oe + tb_roomt * 10) * 15 / 18;
+
+		if (!o_slope_sign)
+			temp2 = temp1 * 100 / (1534 + o_slope * 10);
+		else
+			temp2 = temp1 * 100 / (1534 - o_slope * 10);
+
+		svsb->bts = (temp0 + temp2 - 250) * 4 / 10;
+	}
+
+	return 0;
+}
+
+bool svs_mt8183_efuse_parsing(struct svs_platform *svsp)
+{
+	struct svs_bank *svsb;
+	u32 idx, i, ft_pgm;
 	int ret;
 
 	for (i = 0; i < svsp->efuse_max; i++)
@@ -89,106 +190,12 @@ bool svs_mt8183_efuse_parsing(struct svs_platform *svsp)
 	if (ret)
 		return false;
 
-	/* Thermal efuse parsing */
-	adc_ge_t = (svsp->tefuse[1] >> 22) & GENMASK(9, 0);
-	adc_oe_t = (svsp->tefuse[1] >> 12) & GENMASK(9, 0);
-
-	o_vtsmcu[0] = (svsp->tefuse[0] >> 17) & GENMASK(8, 0);
-	o_vtsmcu[1] = (svsp->tefuse[0] >> 8) & GENMASK(8, 0);
-	o_vtsmcu[2] = svsp->tefuse[1] & GENMASK(8, 0);
-	o_vtsmcu[3] = (svsp->tefuse[2] >> 23) & GENMASK(8, 0);
-	o_vtsmcu[4] = (svsp->tefuse[2] >> 5) & GENMASK(8, 0);
-	o_vtsabb = (svsp->tefuse[2] >> 14) & GENMASK(8, 0);
-
-	degc_cali = (svsp->tefuse[0] >> 1) & GENMASK(5, 0);
-	adc_cali_en_t = svsp->tefuse[0] & BIT(0);
-	o_slope_sign = (svsp->tefuse[0] >> 7) & BIT(0);
-
-	ts_id = (svsp->tefuse[1] >> 9) & BIT(0);
-	o_slope = (svsp->tefuse[0] >> 26) & GENMASK(5, 0);
-
-	if (adc_cali_en_t == 1) {
-		if (!ts_id)
-			o_slope = 0;
-
-		if (adc_ge_t < 265 || adc_ge_t > 758 ||
-		    adc_oe_t < 265 || adc_oe_t > 758 ||
-		    o_vtsmcu[0] < -8 || o_vtsmcu[0] > 484 ||
-		    o_vtsmcu[1] < -8 || o_vtsmcu[1] > 484 ||
-		    o_vtsmcu[2] < -8 || o_vtsmcu[2] > 484 ||
-		    o_vtsmcu[3] < -8 || o_vtsmcu[3] > 484 ||
-		    o_vtsmcu[4] < -8 || o_vtsmcu[4] > 484 ||
-		    o_vtsabb < -8 || o_vtsabb > 484 ||
-		    degc_cali < 1 || degc_cali > 63) {
-			dev_err(svsp->dev, "bad thermal efuse, no mon mode\n");
-			goto remove_mt8183_svsb_mon_mode;
+	ret = svs_mt8183_efuse_thermal_parsing(svsp);
+	if (ret) {
+		for (idx = 0; idx < svsp->bank_max; idx++) {
+			svsb = &svsp->banks[idx];
+			svsb->mode_support &= ~SVSB_MODE_MON;
 		}
-	} else {
-		dev_err(svsp->dev, "no thermal efuse, no mon mode\n");
-		goto remove_mt8183_svsb_mon_mode;
-	}
-
-	ge = ((adc_ge_t - 512) * 10000) / 4096;
-	oe = (adc_oe_t - 512);
-	gain = (10000 + ge);
-
-	format[0] = (o_vtsmcu[0] + 3350 - oe);
-	format[1] = (o_vtsmcu[1] + 3350 - oe);
-	format[2] = (o_vtsmcu[2] + 3350 - oe);
-	format[3] = (o_vtsmcu[3] + 3350 - oe);
-	format[4] = (o_vtsmcu[4] + 3350 - oe);
-	format[5] = (o_vtsabb + 3350 - oe);
-
-	for (i = 0; i < 6; i++)
-		x_roomt[i] = (((format[i] * 10000) / 4096) * 10000) / gain;
-
-	temp0 = (10000 * 100000 / gain) * 15 / 18;
-
-	if (!o_slope_sign)
-		mts = (temp0 * 10) / (1534 + o_slope * 10);
-	else
-		mts = (temp0 * 10) / (1534 - o_slope * 10);
-
-	for (idx = 0; idx < svsp->bank_max; idx++) {
-		svsb = &svsp->banks[idx];
-		svsb->mts = mts;
-
-		switch (svsb->sw_id) {
-		case SVSB_CPU_LITTLE:
-			tb_roomt = x_roomt[3];
-			break;
-		case SVSB_CPU_BIG:
-			tb_roomt = x_roomt[4];
-			break;
-		case SVSB_CCI:
-			tb_roomt = x_roomt[3];
-			break;
-		case SVSB_GPU:
-			tb_roomt = x_roomt[1];
-			break;
-		default:
-			dev_err(svsb->dev, "unknown sw_id: %u\n", svsb->sw_id);
-			goto remove_mt8183_svsb_mon_mode;
-		}
-
-		temp0 = (degc_cali * 10 / 2);
-		temp1 = ((10000 * 100000 / 4096 / gain) *
-			 oe + tb_roomt * 10) * 15 / 18;
-
-		if (!o_slope_sign)
-			temp2 = temp1 * 100 / (1534 + o_slope * 10);
-		else
-			temp2 = temp1 * 100 / (1534 - o_slope * 10);
-
-		svsb->bts = (temp0 + temp2 - 250) * 4 / 10;
-	}
-
-	return true;
-
-remove_mt8183_svsb_mon_mode:
-	for (idx = 0; idx < svsp->bank_max; idx++) {
-		svsb = &svsp->banks[idx];
-		svsb->mode_support &= ~SVSB_MODE_MON;
 	}
 
 	return true;
